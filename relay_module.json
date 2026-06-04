@@ -1,0 +1,349 @@
+{
+  "name": "课程项目跨期接力模块",
+  "description": "全球独有的课程项目跨期接力系统，实现学生作业从一次性负担到可增值数字资产的转变",
+  "version": "1.0.0",
+  "createdAt": "2026-05-08",
+  "author": "明道云Trae专家",
+  
+  "tables": [
+    {
+      "id": "relay_projects",
+      "name": "接力项目表",
+      "description": "可接力项目信息",
+      "fields": [
+        {"id": "project_id", "name": "项目编号", "type": "autoNumber", "format": "RP-{YYYY}-{NNNN}", "required": true},
+        {"id": "name", "name": "项目名称", "type": "text", "maxLength": 200, "required": true},
+        {"id": "original_author", "name": "原作者", "type": "member", "relationTable": "users", "required": true},
+        {"id": "teacher", "name": "负责老师", "type": "member", "relationTable": "users", "required": true},
+        {"id": "course", "name": "所属课程", "type": "relation", "relationTable": "courses", "required": true},
+        {"id": "achievements", "name": "已有成果", "type": "textarea", "maxLength": 2000, "required": true},
+        {"id": "todo", "name": "待完成内容", "type": "textarea", "maxLength": 2000, "required": true},
+        {"id": "difficulty", "name": "难度等级", "type": "select", "options": ["初级", "中级", "高级", "挑战"], "default": "中级"},
+        {"id": "skills", "name": "所需技能", "type": "textarea"},
+        {"id": "deadline", "name": "截止时间", "type": "datetime"},
+        {"id": "status", "name": "项目状态", "type": "select", "options": ["招募中", "进行中", "已完成", "已关闭"], "default": "招募中", "required": true},
+        {"id": "created_at", "name": "创建时间", "type": "datetime", "auto": true}
+      ],
+      "views": [
+        {"id": "all_projects", "name": "全部项目", "type": "table"},
+        {"id": "recruiting", "name": "招募中", "type": "table", "filter": {"status": "招募中"}},
+        {"id": "in_progress", "name": "进行中", "type": "table", "filter": {"status": "进行中"}}
+      ],
+      "permissions": {
+        "create": ["teacher", "admin"],
+        "read": ["student", "teacher", "admin"],
+        "update": ["teacher", "admin"],
+        "delete": ["teacher", "admin"]
+      }
+    },
+    {
+      "id": "relay_applications",
+      "name": "接力申请表",
+      "description": "学生申请接力项目",
+      "fields": [
+        {"id": "application_id", "name": "申请编号", "type": "autoNumber", "format": "RA-{YYYY}-{NNNN}", "required": true},
+        {"id": "project", "name": "申请项目", "type": "relation", "relationTable": "relay_projects", "required": true},
+        {"id": "applicant", "name": "申请人", "type": "member", "relationTable": "users", "required": true},
+        {"id": "resume", "name": "个人简介", "type": "textarea", "maxLength": 1000, "required": true},
+        {"id": "plan", "name": "接力计划", "type": "textarea", "maxLength": 2000, "required": true},
+        {"id": "related_works", "name": "相关作品", "type": "relation", "relationTable": "academic_assets"},
+        {"id": "status", "name": "申请状态", "type": "select", "options": ["待审核", "老师审核中", "原作者审核中", "已通过", "已驳回"], "default": "待审核", "required": true},
+        {"id": "teacher_comment", "name": "老师意见", "type": "textarea"},
+        {"id": "author_comment", "name": "原作者意见", "type": "textarea"},
+        {"id": "created_at", "name": "申请时间", "type": "datetime", "auto": true}
+      ],
+      "views": [
+        {"id": "all_applications", "name": "全部申请", "type": "table"},
+        {"id": "my_applications", "name": "我的申请", "type": "table", "filter": {"applicant": "$currentUser"}}
+      ],
+      "permissions": {
+        "create": ["student"],
+        "read": {"rule": "OR", "conditions": [{"field": "applicant", "operator": "=", "value": "$currentUser"}, {"currentRole": ["teacher", "admin"]}]},
+        "update": ["teacher", "admin"],
+        "delete": ["student", "admin"]
+      }
+    },
+    {
+      "id": "project_spaces",
+      "name": "项目协作空间",
+      "description": "接力项目协作空间",
+      "fields": [
+        {"id": "space_id", "name": "空间编号", "type": "autoNumber", "format": "SP-{YYYY}-{NNNN}", "required": true},
+        {"id": "project", "name": "关联项目", "type": "relation", "relationTable": "relay_projects", "required": true},
+        {"id": "current_contributor", "name": "当前贡献者", "type": "member", "relationTable": "users", "required": true},
+        {"id": "mentor", "name": "指导者(原作者)", "type": "member", "relationTable": "users"},
+        {"id": "teacher", "name": "负责老师", "type": "member", "relationTable": "users", "required": true},
+        {"id": "progress", "name": "进度", "type": "select", "options": ["0%", "25%", "50%", "75%", "100%"], "default": "0%"},
+        {"id": "start_date", "name": "开始时间", "type": "date", "required": true},
+        {"id": "end_date", "name": "结束时间", "type": "date"},
+        {"id": "status", "name": "空间状态", "type": "select", "options": ["进行中", "已提交", "已审核", "已结案"], "default": "进行中", "required": true}
+      ],
+      "views": [
+        {"id": "all_spaces", "name": "全部空间", "type": "table"},
+        {"id": "my_spaces", "name": "我的空间", "type": "table", "filter": {"current_contributor": "$currentUser"}}
+      ],
+      "permissions": {
+        "create": ["teacher", "admin"],
+        "read": {"rule": "OR", "conditions": [{"field": "current_contributor", "operator": "=", "value": "$currentUser"}, {"field": "mentor", "operator": "=", "value": "$currentUser"}, {"field": "teacher", "operator": "=", "value": "$currentUser"}, {"currentRole": ["admin"]}]},
+        "update": ["teacher", "admin"]
+      }
+    },
+    {
+      "id": "space_messages",
+      "name": "空间留言",
+      "description": "协作空间内的留言记录",
+      "fields": [
+        {"id": "message_id", "name": "留言编号", "type": "autoNumber", "format": "MSG-{YYYY}-{NNNN}", "required": true},
+        {"id": "space", "name": "所属空间", "type": "relation", "relationTable": "project_spaces", "required": true},
+        {"id": "sender", "name": "发送人", "type": "member", "relationTable": "users", "required": true},
+        {"id": "content", "name": "留言内容", "type": "textarea", "maxLength": 1000, "required": true},
+        {"id": "created_at", "name": "发送时间", "type": "datetime", "auto": true}
+      ],
+      "views": [{"id": "all_messages", "name": "全部留言", "type": "table"}],
+      "permissions": {
+        "create": {"rule": "OR", "conditions": [{"relation": {"space": {"current_contributor": "$currentUser"}}}, {"relation": {"space": {"mentor": "$currentUser"}}}, {"relation": {"space": {"teacher": "$currentUser"}}}, {"currentRole": ["admin"]}]},
+        "read": {"rule": "OR", "conditions": [{"relation": {"space": {"current_contributor": "$currentUser"}}}, {"relation": {"space": {"mentor": "$currentUser"}}}, {"relation": {"space": {"teacher": "$currentUser"}}}, {"currentRole": ["admin"]}]},
+        "delete": ["admin"]
+      }
+    },
+    {
+      "id": "relay_deliverables",
+      "name": "接力成果提交",
+      "description": "学生提交的接力成果",
+      "fields": [
+        {"id": "deliverable_id", "name": "成果编号", "type": "autoNumber", "format": "DL-{YYYY}-{NNNN}", "required": true},
+        {"id": "space", "name": "所属空间", "type": "relation", "relationTable": "project_spaces", "required": true},
+        {"id": "title", "name": "成果标题", "type": "text", "maxLength": 200, "required": true},
+        {"id": "description", "name": "成果描述", "type": "textarea", "maxLength": 2000, "required": true},
+        {"id": "files", "name": "成果文件", "type": "file", "maxCount": 10},
+        {"id": "submitter", "name": "提交人", "type": "member", "relationTable": "users", "required": true},
+        {"id": "status", "name": "审核状态", "type": "select", "options": ["待审核", "已通过", "需修改", "已驳回"], "default": "待审核", "required": true},
+        {"id": "teacher_comment", "name": "老师评语", "type": "textarea"},
+        {"id": "submitted_at", "name": "提交时间", "type": "datetime", "auto": true},
+        {"id": "reviewed_at", "name": "审核时间", "type": "datetime"}
+      ],
+      "views": [
+        {"id": "all_deliverables", "name": "全部成果", "type": "table"},
+        {"id": "my_deliverables", "name": "我的成果", "type": "table", "filter": {"submitter": "$currentUser"}}
+      ],
+      "permissions": {
+        "create": {"rule": "OR", "conditions": [{"relation": {"space": {"current_contributor": "$currentUser"}}}, {"currentRole": ["teacher", "admin"]}]},
+        "read": {"rule": "OR", "conditions": [{"submitter": "$currentUser"}, {"relation": {"space": {"teacher": "$currentUser"}}}, {"relation": {"space": {"mentor": "$currentUser"}}}, {"currentRole": ["admin"]}]},
+        "update": ["teacher", "admin"],
+        "delete": ["teacher", "admin"]
+      }
+    },
+    {
+      "id": "gene_chain",
+      "name": "学术基因链",
+      "description": "项目传承记录",
+      "fields": [
+        {"id": "chain_id", "name": "基因链ID", "type": "autoNumber", "format": "GL-{YYYY}-{NNNN}", "required": true},
+        {"id": "project", "name": "关联项目", "type": "relation", "relationTable": "relay_projects", "required": true},
+        {"id": "generation", "name": "届次", "type": "number", "min": 1, "required": true},
+        {"id": "contributor", "name": "贡献者", "type": "member", "relationTable": "users", "required": true},
+        {"id": "mentor", "name": "指导者", "type": "member", "relationTable": "users"},
+        {"id": "deliverable", "name": "提交成果", "type": "relation", "relationTable": "relay_deliverables"},
+        {"id": "contribution", "name": "贡献描述", "type": "textarea", "maxLength": 1000},
+        {"id": "start_date", "name": "开始时间", "type": "date", "required": true},
+        {"id": "end_date", "name": "完成时间", "type": "date"},
+        {"id": "prev_record", "name": "上一届记录", "type": "relation", "relationTable": "gene_chain"},
+        {"id": "created_at", "name": "创建时间", "type": "datetime", "auto": true}
+      ],
+      "views": [
+        {"id": "all_chains", "name": "全部基因链", "type": "table"},
+        {"id": "my_chains", "name": "我的传承记录", "type": "table", "filter": {"contributor": "$currentUser"}}
+      ],
+      "permissions": {
+        "create": ["teacher", "admin"],
+        "read": ["student", "teacher", "admin"],
+        "update": ["teacher", "admin"],
+        "delete": ["admin"]
+      }
+    }
+  ],
+  
+  "workflows": [
+    {
+      "id": "application_review",
+      "name": "接力申请审批流程",
+      "trigger": {"type": "create", "table": "relay_applications"},
+      "steps": [
+        {"id": "s1", "type": "notify", "name": "通知老师", "recipient": "{{trigger.project.teacher}}", "title": "新的接力申请", "content": "{{trigger.applicant.name}}申请了您的项目《{{trigger.project.name}}》"},
+        {"id": "s2", "type": "update", "name": "更新状态", "table": "relay_applications", "filter": {"id": "{{trigger.id}}"}, "fields": {"status": "老师审核中"}},
+        {"id": "s3", "type": "approval", "name": "老师审核", "approver": "{{trigger.project.teacher}}", "field": "teacher_comment", "approveField": "status", "approveValue": "原作者审核中", "rejectValue": "已驳回"},
+        {"id": "s4", "type": "branch", "name": "判断老师审核结果", "condition": {"field": "{{trigger.status}}", "operator": "=", "value": "已驳回"}, "yes": "s9", "no": "s5"},
+        {"id": "s5", "type": "notify", "name": "通知原作者", "recipient": "{{trigger.project.original_author}}", "title": "接力申请待审核", "content": "{{trigger.applicant.name}}申请了您的作品《{{trigger.project.name}}》，请审核"},
+        {"id": "s6", "type": "approval", "name": "原作者审核", "approver": "{{trigger.project.original_author}}", "field": "author_comment", "approveField": "status", "approveValue": "已通过", "rejectValue": "已驳回"},
+        {"id": "s7", "type": "branch", "name": "判断原作者审核结果", "condition": {"field": "{{trigger.status}}", "operator": "=", "value": "已通过"}, "yes": "s8", "no": "s9"},
+        {"id": "s8", "type": "data", "name": "创建协作空间", "action": "create", "table": "project_spaces", "fields": {"project": "{{trigger.project.id}}", "current_contributor": "{{trigger.applicant.id}}", "mentor": "{{trigger.project.original_author.id}}", "teacher": "{{trigger.project.teacher.id}}", "start_date": "{{today}}", "status": "进行中"}},
+        {"id": "s9", "type": "notify", "name": "通知申请人", "recipient": "{{trigger.applicant}}", "title": "接力申请结果", "content": "{{trigger.status == '已通过' ? '恭喜！您的接力申请已通过，项目空间已创建。' : '很遗憾，您的接力申请未通过。'}}"},
+        {"id": "s10", "type": "end", "name": "结束"}
+      ]
+    },
+    {
+      "id": "deliverable_review",
+      "name": "成果审核结案流程",
+      "trigger": {"type": "create", "table": "relay_deliverables"},
+      "steps": [
+        {"id": "s1", "type": "notify", "name": "通知老师", "recipient": "{{trigger.space.teacher}}", "title": "成果提交待审核", "content": "{{trigger.submitter.name}}提交了接力成果《{{trigger.title}}》"},
+        {"id": "s2", "type": "approval", "name": "老师审核", "approver": "{{trigger.space.teacher}}", "field": "teacher_comment", "approveField": "status", "approveValue": "已通过", "rejectValue": "已驳回"},
+        {"id": "s3", "type": "branch", "name": "判断审核结果", "condition": {"field": "{{trigger.status}}", "operator": "=", "value": "已通过"}, "yes": "s4", "no": "s8"},
+        {"id": "s4", "type": "data", "name": "获取基因链数量", "query": {"table": "gene_chain", "filter": {"project": "{{trigger.space.project.id}}"}, "aggregate": {"count": "id"}}},
+        {"id": "s5", "type": "data", "name": "创建基因链记录", "action": "create", "table": "gene_chain", "fields": {"project": "{{trigger.space.project.id}}", "generation": "{{s4.result.count + 1}}", "contributor": "{{trigger.submitter.id}}", "mentor": "{{trigger.space.mentor.id}}", "deliverable": "{{trigger.id}}", "contribution": "{{trigger.description}}", "start_date": "{{trigger.space.start_date}}", "end_date": "{{today}}"}},
+        {"id": "s6", "type": "data", "name": "发放完成积分", "action": "create", "table": "points_log", "fields": {"user": "{{trigger.submitter.id}}", "change": 30, "type": "完成奖励", "description": "完成接力项目奖励", "operator": "system"}},
+        {"id": "s7", "type": "branch", "name": "判断是否有指导者", "condition": {"expression": "{{trigger.space.mentor != null}}"}, "yes": "s7a", "no": "s7b"},
+        {"id": "s7a", "type": "data", "name": "发放指导积分", "action": "create", "table": "points_log", "fields": {"user": "{{trigger.space.mentor.id}}", "change": 15, "type": "指导奖励", "description": "指导接力项目奖励", "operator": "system"}},
+        {"id": "s7b", "type": "data", "name": "更新空间状态", "action": "update", "table": "project_spaces", "filter": {"id": "{{trigger.space.id}}"}, "fields": {"status": "已结案", "end_date": "{{today}}"}},
+        {"id": "s8", "type": "notify", "name": "通知相关人员", "recipient": ["{{trigger.submitter}}", "{{trigger.space.mentor}}"], "title": "成果审核结果", "content": "{{trigger.status == '已通过' ? '恭喜！您的接力成果已通过审核，基因链已更新。' : '您的接力成果未通过审核，请查看评语。'}}"},
+        {"id": "s9", "type": "end", "name": "结束"}
+      ]
+    },
+    {
+      "id": "message_notify",
+      "name": "空间留言通知",
+      "trigger": {"type": "create", "table": "space_messages"},
+      "steps": [
+        {"id": "s1", "type": "notify", "name": "通知空间成员", "recipient": ["{{trigger.space.current_contributor}}", "{{trigger.space.mentor}}", "{{trigger.space.teacher}}"], "title": "新的空间留言", "content": "{{trigger.sender.name}}在项目空间中留言：{{trigger.content}}"},
+        {"id": "s2", "type": "end", "name": "结束"}
+      ]
+    }
+  ],
+  
+  "pages": [
+    {
+      "id": "project_list",
+      "name": "接力项目列表",
+      "layout": "card",
+      "source": "relay_projects",
+      "filter": {"status": "招募中"},
+      "actions": ["view", "apply"],
+      "columns": ["project_id", "name", "original_author", "teacher", "course", "difficulty", "deadline"],
+      "titleField": "name",
+      "subtitleField": "course.name",
+      "descriptionField": "achievements"
+    },
+    {
+      "id": "project_detail",
+      "name": "项目详情",
+      "layout": "form",
+      "source": "relay_projects",
+      "fields": ["project_id", "name", "original_author", "teacher", "course", "achievements", "todo", "difficulty", "skills", "deadline", "status"],
+      "actions": ["apply"]
+    },
+    {
+      "id": "application_form",
+      "name": "接力申请表",
+      "layout": "form",
+      "source": "relay_applications",
+      "fields": ["project", "resume", "plan", "related_works"],
+      "requiredFields": ["project", "resume", "plan"],
+      "submitLabel": "提交申请"
+    },
+    {
+      "id": "my_applications",
+      "name": "我的申请",
+      "layout": "table",
+      "source": "relay_applications",
+      "filter": {"applicant": "$currentUser"},
+      "columns": ["application_id", "project.name", "status", "created_at"],
+      "actions": ["view"]
+    },
+    {
+      "id": "review_applications",
+      "name": "审批接力申请",
+      "layout": "table",
+      "source": "relay_applications",
+      "filter": {"status": {"$in": ["待审核", "老师审核中", "原作者审核中"]}},
+      "columns": ["application_id", "project.name", "applicant", "status", "created_at"],
+      "actions": ["view", "approve", "reject"]
+    },
+    {
+      "id": "space_list",
+      "name": "我的项目空间",
+      "layout": "table",
+      "source": "project_spaces",
+      "filter": {"current_contributor": "$currentUser"},
+      "columns": ["space_id", "project.name", "progress", "status", "start_date", "end_date"],
+      "actions": ["view", "submit"]
+    },
+    {
+      "id": "space_detail",
+      "name": "项目协作空间",
+      "layout": "dashboard",
+      "widgets": [
+        {"type": "info", "title": "项目信息", "fields": ["project.name", "project.achievements", "project.todo"]},
+        {"type": "progress", "title": "项目进度", "field": "progress"},
+        {"type": "list", "title": "团队成员", "items": [{"label": "当前贡献者", "value": "current_contributor.name"}, {"label": "指导者", "value": "mentor.name"}, {"label": "负责老师", "value": "teacher.name"}]},
+        {"type": "message", "title": "留言讨论", "source": "space_messages", "filter": {"space": "$currentRecord"}, "fields": ["sender.name", "content", "created_at"]},
+        {"type": "button", "title": "提交成果", "action": "create", "table": "relay_deliverables", "params": {"space": "$currentRecord.id"}}
+      ]
+    },
+    {
+      "id": "deliverable_form",
+      "name": "提交接力成果",
+      "layout": "form",
+      "source": "relay_deliverables",
+      "fields": ["title", "description", "files"],
+      "requiredFields": ["title", "description"],
+      "submitLabel": "提交成果"
+    },
+    {
+      "id": "review_deliverables",
+      "name": "审核接力成果",
+      "layout": "table",
+      "source": "relay_deliverables",
+      "filter": {"status": "待审核"},
+      "columns": ["deliverable_id", "title", "space.project.name", "submitter", "submitted_at"],
+      "actions": ["view", "approve", "reject"]
+    },
+    {
+      "id": "gene_chain_view",
+      "name": "学术基因链",
+      "layout": "timeline",
+      "source": "gene_chain",
+      "filter": {"project": "{{params.project_id}}"},
+      "sort": {"generation": "asc"},
+      "titleField": "generation",
+      "subtitleField": "contributor.name",
+      "descriptionField": "contribution",
+      "dateField": "end_date"
+    },
+    {
+      "id": "my_gene_chain",
+      "name": "我的学术传承",
+      "layout": "timeline",
+      "source": "gene_chain",
+      "filter": {"contributor": "$currentUser"},
+      "sort": {"generation": "desc"},
+      "titleField": "project.name",
+      "subtitleField": "generation",
+      "descriptionField": "contribution",
+      "dateField": "end_date"
+    }
+  ],
+  
+  "validationRules": {
+    "relay_projects": {
+      "name": {"required": true, "minLength": 2, "maxLength": 200},
+      "achievements": {"required": true, "minLength": 10, "maxLength": 2000},
+      "todo": {"required": true, "minLength": 10, "maxLength": 2000}
+    },
+    "relay_applications": {
+      "resume": {"required": true, "minLength": 50, "maxLength": 1000},
+      "plan": {"required": true, "minLength": 100, "maxLength": 2000}
+    },
+    "relay_deliverables": {
+      "title": {"required": true, "minLength": 2, "maxLength": 200},
+      "description": {"required": true, "minLength": 50, "maxLength": 2000}
+    }
+  },
+  
+  "notifications": [
+    {"id": "app_notify_teacher", "name": "通知老师新申请", "template": "{{applicant.name}}申请了您的项目《{{project.name}}》"},
+    {"id": "app_notify_author", "name": "通知原作者审核", "template": "{{applicant.name}}申请了您的作品《{{project.name}}》"},
+    {"id": "app_result", "name": "申请结果通知", "template": "{{status == '已通过' ? '恭喜！您的接力申请已通过。' : '您的接力申请未通过。'}}"},
+    {"id": "deliverable_notify", "name": "成果提交通知", "template": "{{submitter.name}}提交了接力成果《{{title}}》"},
+    {"id": "deliverable_result", "name": "成果审核结果", "template": "{{status == '已通过' ? '恭喜！您的接力成果已通过审核。' : '您的接力成果未通过审核。'}}"}
+  ]
+}
